@@ -1,15 +1,14 @@
-"""SQL Studio: ad-hoc SELECT-only explorer against the public data catalog."""
+"""SQL studio: ad-hoc SELECT-only explorer against the public data catalog."""
 
 import streamlit as st
 
 from utils.db import get_conn
 
-st.title("🔍 Interactive SQL Explorer")
+st.title("Interactive SQL explorer")
 st.caption("Run ad-hoc read-only queries against `SNOWFLAKE_PUBLIC_DATA_FREE.PUBLIC_DATA_FREE`")
-st.info("For safety, only `SELECT` statements are allowed here.")
 
 sample_queries = {
-    "Top 10 States with Highest Unemployment (Latest Month)": """SELECT
+    "Top 10 states with highest unemployment (latest month)": """SELECT
     g.GEO_NAME AS STATE_NAME,
     t.DATE,
     ROUND(t.VALUE * 100, 2) AS UNEMPLOYMENT_RATE_PCT
@@ -21,7 +20,7 @@ WHERE g.LEVEL = 'State'
   AND t.DATE = (SELECT MAX(DATE) FROM SNOWFLAKE_PUBLIC_DATA_FREE.PUBLIC_DATA_FREE.BUREAU_OF_LABOR_STATISTICS_EMPLOYMENT_TIMESERIES)
 ORDER BY UNEMPLOYMENT_RATE_PCT DESC
 LIMIT 10;""",
-    "US CPI Inflation Categories (Last 12 Months)": """SELECT
+    "US CPI inflation categories (last 12 months)": """SELECT
     DATE,
     VARIABLE_NAME,
     VALUE AS CPI_INDEX
@@ -34,7 +33,7 @@ WHERE GEO_ID = 'country/USA'
   )
   AND DATE >= DATEADD('month', -12, CURRENT_DATE())
 ORDER BY DATE DESC, VARIABLE_NAME ASC;""",
-    "Federally Declared Disasters by Incident Type (Last 5 Years)": """SELECT
+    "Federally declared disasters by type (last 5 years)": """SELECT
     DISASTER_TYPE,
     COUNT(*) AS TOTAL_DISASTERS,
     SUM(APPROVED_INDIVIDUAL_AND_HOUSEHOLDS_PROGRAM_AMOUNT) AS TOTAL_AID_DOLLARS
@@ -45,18 +44,20 @@ ORDER BY TOTAL_DISASTERS DESC
 LIMIT 10;""",
 }
 
-selected_template = st.selectbox("Choose a prebuilt SQL query template:", options=list(sample_queries.keys()))
-user_sql = st.text_area("SQL Statement:", value=sample_queries[selected_template], height=180)
+selected_template = st.selectbox("Prebuilt query template", options=list(sample_queries.keys()))
+user_sql = st.text_area("SQL statement", value=sample_queries[selected_template], height=180)
 
-if st.button("▶️ Execute Query", type="primary"):
+st.caption("Only `SELECT` statements are allowed.")
+
+if st.button("Execute query", type="primary", icon=":material/play_arrow:"):
     stripped = user_sql.strip().rstrip(";").strip()
     if not stripped.upper().startswith("SELECT") and not stripped.upper().startswith("WITH"):
-        st.error("Only `SELECT` (or `WITH ... SELECT`) statements are allowed in this explorer.")
+        st.error("Only `SELECT` (or `WITH ... SELECT`) statements are allowed.", icon=":material/error:")
     else:
-        with st.spinner("Executing SQL query on Snowflake..."):
+        with st.spinner("Executing SQL query..."):
             try:
                 sql_result = get_conn().query(stripped)
-                st.success(f"Query returned {len(sql_result)} rows.")
-                st.dataframe(sql_result, width="stretch")
+                st.success(f"Query returned {len(sql_result)} rows.", icon=":material/check_circle:")
+                st.dataframe(sql_result, use_container_width=True)
             except Exception as e:
-                st.error(f"SQL Execution Error: {e}")
+                st.error(f"SQL execution error: {e}", icon=":material/error:")

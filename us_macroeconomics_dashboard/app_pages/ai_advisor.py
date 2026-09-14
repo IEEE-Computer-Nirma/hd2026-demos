@@ -1,9 +1,4 @@
-"""AI Economic Advisor — Chat with Snowflake Cortex about your macro data.
-
-Uses Cortex complete() to provide data-aware analysis. The assistant
-has context about the datasets available (unemployment, CPI, housing, companies)
-and can query live data to ground its answers.
-"""
+"""AI Economic Advisor — chat with Snowflake Cortex about macro data."""
 
 import streamlit as st
 
@@ -23,12 +18,10 @@ When answering:
 - Provide actionable interpretation, not just numbers.
 - If the user asks about data you have context for, interpret it. If not, say so clearly.
 - Keep responses concise but insightful. Use bullet points for clarity.
-- When relevant, suggest which page of the app the user should visit for deeper analysis.
 """
 
 
 def _build_data_context():
-    """Fetch latest macro snapshot to inject as grounding context."""
     sql = """
     WITH latest_unemp AS (
         SELECT ROUND(AVG(t.VALUE * 100), 2) AS AVG_RATE, MAX(t.DATE) AS AS_OF
@@ -89,13 +82,13 @@ def _build_data_context():
 
 
 SUGGESTIONS = {
-    ":blue[:material/trending_up:] What's the inflation outlook?": "Based on the latest CPI data, what's the current inflation trend and outlook?",
-    ":green[:material/home:] Housing affordability": "How has housing affordability changed? Analyze the HPI trend relative to inflation.",
+    ":blue[:material/trending_up:] Inflation outlook": "Based on the latest CPI data, what's the current inflation trend and outlook?",
+    ":green[:material/cottage:] Housing affordability": "How has housing affordability changed? Analyze the HPI trend relative to inflation.",
     ":orange[:material/work:] Labor market health": "Assess the current health of the US labor market based on unemployment data across states.",
-    ":violet[:material/compare_arrows:] Unemployment vs Inflation": "Explain the relationship between unemployment and inflation. What does the current data suggest about the Phillips Curve?",
+    ":violet[:material/compare_arrows:] Unemployment vs inflation": "Explain the relationship between unemployment and inflation. What does the current data suggest about the Phillips Curve?",
 }
 
-st.title("🤖 AI Economic Advisor")
+st.title("AI economic advisor")
 st.caption("Ask questions about US macroeconomic data — powered by Snowflake Cortex")
 
 if "chat_messages" not in st.session_state:
@@ -105,16 +98,13 @@ if "data_context" not in st.session_state:
     with st.spinner("Loading live data context..."):
         st.session_state.data_context = _build_data_context()
 
-# Show data context badge
-with st.expander("📊 Current Data Context (grounding the AI)", expanded=False):
+with st.expander("Current data context (grounding the AI)", expanded=False, icon=":material/database:"):
     st.code(st.session_state.data_context, language="text")
 
-# Display chat history
 for msg in st.session_state.chat_messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# Suggestion chips when chat is empty
 if not st.session_state.chat_messages:
     selected = st.pills(
         "Try asking:", list(SUGGESTIONS.keys()), label_visibility="collapsed"
@@ -124,7 +114,6 @@ if not st.session_state.chat_messages:
         st.session_state.chat_messages.append({"role": "user", "content": prompt})
         st.rerun()
 
-# Chat input
 if prompt := st.chat_input("Ask about unemployment, inflation, housing, companies..."):
     st.session_state.chat_messages.append({"role": "user", "content": prompt})
 
@@ -145,9 +134,8 @@ if prompt := st.chat_input("Ask about unemployment, inflation, housing, companie
 
     st.session_state.chat_messages.append({"role": "assistant", "content": response})
 
-# Clear chat button
 if st.session_state.chat_messages:
-    if st.button("Clear conversation", type="tertiary"):
+    if st.button("Clear conversation", type="tertiary", icon=":material/delete:"):
         st.session_state.chat_messages = []
         st.session_state.pop("data_context", None)
         st.rerun()

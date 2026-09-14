@@ -1,13 +1,12 @@
 """Shared Snowflake connection, cached data loaders, and CRUD helpers.
 
-LOCAL VERSION: Uses snowflake-snowpark-python with credentials from
-.streamlit/secrets.toml via st.connection("snowflake").
-
 All queries against the public reference data
 (`SNOWFLAKE_PUBLIC_DATA_FREE.PUBLIC_DATA_FREE`) are read-only.
 The watchlist table (`HACKDAYS_APP_DB.APP_DATA.WATCHLIST`) is app-owned
 and supports full Create / Read / Update / Delete.
 """
+
+import os
 
 import streamlit as st
 
@@ -16,11 +15,10 @@ PUBLIC_DATA = "SNOWFLAKE_PUBLIC_DATA_FREE.PUBLIC_DATA_FREE"
 
 
 def get_conn():
-    return st.connection("snowflake")
+    return st.connection("snowflake", ttl=os.getenv("SNOWFLAKE_CONNECTION_TTL"))
 
 
 def cortex_complete(prompt: str, model: str = "llama3.1-70b") -> str:
-    """Call Snowflake Cortex COMPLETE via SQL."""
     session = get_conn().session()
     rows = session.sql(
         "SELECT SNOWFLAKE.CORTEX.COMPLETE(?, ?) AS RESPONSE",
@@ -30,7 +28,6 @@ def cortex_complete(prompt: str, model: str = "llama3.1-70b") -> str:
 
 
 def ensure_watchlist_table():
-    """Idempotently create the app-owned database/schema/tables."""
     session = get_conn().session()
     session.sql("CREATE DATABASE IF NOT EXISTS HACKDAYS_APP_DB").collect()
     session.sql("CREATE SCHEMA IF NOT EXISTS HACKDAYS_APP_DB.APP_DATA").collect()
@@ -60,9 +57,8 @@ def ensure_watchlist_table():
     ).collect()
 
 
-# -------------------------------------------------------------
-# Read-only public data loaders (cached)
-# -------------------------------------------------------------
+# ----- Read-only public data loaders (cached) -----
+
 @st.cache_data(ttl=3600)
 def load_macro_kpis():
     sql = f"""
@@ -216,6 +212,32 @@ def load_macro_history():
 
 
 @st.cache_data(ttl=3600)
+def load_fed_funds_rate(start_date: str):
+    sql = f"""
+    SELECT DATE, VALUE AS FED_FUNDS_RATE
+    FROM {PUBLIC_DATA}.FEDERAL_RESERVE_TIMESERIES
+    WHERE VARIABLE_NAME ILIKE '%federal funds%effective%rate%'
+      AND VALUE IS NOT NULL
+      AND DATE >= ?
+    ORDER BY DATE ASC
+    """
+    return get_conn().query(sql, params=[start_date])
+
+
+@st.cache_data(ttl=3600)
+def load_treasury_yields(start_date: str):
+    sql = f"""
+    SELECT DATE, VARIABLE_NAME AS MATURITY, VALUE AS YIELD_PCT
+    FROM {PUBLIC_DATA}.US_TREASURY_TIMESERIES
+    WHERE VARIABLE_NAME ILIKE '%yield%'
+      AND VALUE IS NOT NULL
+      AND DATE >= ?
+    ORDER BY DATE ASC, VARIABLE_NAME ASC
+    """
+    return get_conn().query(sql, params=[start_date])
+
+
+@st.cache_data(ttl=3600)
 def search_companies(query: str, exchange_filter: str, limit: int = 50):
     conditions = ["1=1"]
     params = []
@@ -225,7 +247,7 @@ def search_companies(query: str, exchange_filter: str, limit: int = 50):
         like = f"%{query.strip()}%"
         params.extend([like, like, like])
 
-    if exchange_filter and exchange_filter != "All Exchanges":
+    if exchange_filter and exchange_filter != "All exchanges":
         conditions.append("PRIMARY_EXCHANGE_NAME = ?")
         params.append(exchange_filter)
 
@@ -256,7 +278,7 @@ def load_exchanges():
     ORDER BY PRIMARY_EXCHANGE_NAME ASC
     """
     df = get_conn().query(sql)
-    return ["All Exchanges"] + list(df["PRIMARY_EXCHANGE_NAME"].dropna())
+    return ["All exchanges"] + list(df["PRIMARY_EXCHANGE_NAME"].dropna())
 
 
 @st.cache_data(ttl=3600)
@@ -303,9 +325,8 @@ def latest_unemployment_by_state_map():
     return dict(zip(df["STATE_NAME"], df["UNEMPLOYMENT_RATE"]))
 
 
-# -------------------------------------------------------------
-# Watchlist CRUD (app-owned table)
-# -------------------------------------------------------------
+# ----- Watchlist CRUD -----
+
 @st.cache_data(ttl=30)
 def watchlist_list():
     sql = f"""
