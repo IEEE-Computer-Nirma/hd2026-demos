@@ -1,0 +1,12 @@
+definition_version: "2"
+entities:
+  llm_chat_lab:
+    type: streamlit
+    identifier:
+      name: llm_chat_lab
+    title: "LLM Chat Lab"
+    query_warehouse: COMPUTE_WH
+    main_file: streamlit_app.py
+    pages_dir: none
+    artifacts:
+      - streamlit_app.py
