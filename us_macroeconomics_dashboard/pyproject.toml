@@ -1,20 +1,23 @@
 # Streamlit in Snowflake apps run with a pre-installed version of the Streamlit library.
 # To use a different version of the Streamlit library, you must add an External Access Integration to allow package downloads from PyPI or from another repository.
-# Please visit the Streamlit in Snowflake docs (https://docs.snowflake.com/en/developer-guide/streamlit/additional-features#external-network-access-in-sis) to learn more on how to set up an External Access Integration.
+# Please visit the Streamlit in Snowflake docs (https://docs.snowflake.com/en/developer-guide/streamlit/features/external-access) to learn more on how to set up an External Access Integration.
 # If a package repository server is not reachable and the pyproject.toml file has not been modified, the app will fall back to the default version of the Streamlit library.
+#
+# NOTE: This app requires scikit-learn for the ML Training page. Because scikit-learn
+# is not pre-installed, you MUST attach an External Access Integration (EAI) with
+# PyPI access in App Settings before running. Without EAI, the ML Training page will
+# not work. See: https://docs.snowflake.com/en/developer-guide/streamlit/app-development/dependency-management
+
 [project]
 name = "us-macro-economic-observatory"
-requires-python = "~=3.11.0"
+requires-python = ">= 3.11"
 version = "1.0.0"
 description = "US macroeconomic dashboard combining unemployment, CPI, housing data with AI-powered analysis"
 dependencies = [
-    "streamlit[snowflake]",
+    "streamlit[snowflake]>=1.54.0",
     "scikit-learn"
 ]
 
 [tool.uv]
+# earlier versions of numba require a python version < 3.11
 constraint-dependencies = ["numba>=0.56.0"]
-exclude-newer = "7 days"
-
-[tool.uv.exclude-newer-package]
-streamlit = false

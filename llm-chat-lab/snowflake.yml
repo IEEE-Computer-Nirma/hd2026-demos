@@ -1,12 +1,10 @@
-definition_version: "2"
+# created-by: streamlit-in-workspaces; skill-version=1.0.0
+definition_version: 2
 entities:
   llm_chat_lab:
     type: streamlit
-    identifier:
-      name: llm_chat_lab
-    title: "LLM Chat Lab"
-    query_warehouse: COMPUTE_WH
     main_file: streamlit_app.py
-    pages_dir: none
     artifacts:
+      - pyproject.toml
       - streamlit_app.py
+      - .streamlit/config.toml

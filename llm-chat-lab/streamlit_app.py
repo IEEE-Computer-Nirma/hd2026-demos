@@ -2,12 +2,14 @@
 LLM Chat Lab — Plug-and-play chat with Llama via Snowflake Cortex.
 """
 
+import os
+
 import streamlit as st
-from snowflake.snowpark.context import get_active_session
 
 st.set_page_config(page_title="LLM Chat Lab", page_icon="*", layout="centered")
 
-session = get_active_session()
+conn = st.connection("snowflake", ttl=os.getenv("SNOWFLAKE_CONNECTION_TTL"))
+session = conn.session()
 
 MODEL = "llama3.1-70b"
 MAX_HISTORY = 20

@@ -7,8 +7,7 @@ natural language questions grounded in live Snowflake data.
 """
 
 import streamlit as st
-from utils.queries import get_filter_options, build_cortex_context
-from snowflake_connection import get_connection
+from utils.queries import get_filter_options, build_cortex_context, run_cortex_query
 
 # ── Sidebar filters ──────────────────────────────────────────────────────────
 with st.sidebar:
@@ -128,15 +127,11 @@ INSTRUCTIONS
 """
 
         try:
-            conn = get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
+            row = run_cortex_query(
                 "SELECT SNOWFLAKE.CORTEX.COMPLETE('llama3.1-70b', %s) AS RESPONSE",
                 (prompt,),
             )
-            response = cursor.fetchone()[0]
-            cursor.close()
-            conn.close()
+            response = row[0]
         except Exception as e:
             st.error(f"Snowflake Cortex returned an error: {e}")
             st.stop()

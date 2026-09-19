@@ -1,3 +1,4 @@
+# created-by: streamlit-in-workspaces; skill-version=1.0.0
 definition_version: 2
 entities:
   streamlit_app:
@@ -6,4 +7,12 @@ entities:
     artifacts:
       - pyproject.toml
       - app.py
+      - snowflake_connection.py
+      - utils/__init__.py
+      - utils/queries.py
+      - app_pages/overview.py
+      - app_pages/sales_analytics.py
+      - app_pages/customer_insights.py
+      - app_pages/inventory.py
+      - app_pages/ai_advisor.py
       - .streamlit/config.toml
